@@ -1,0 +1,62 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ConnectionRequestStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+}
+
+model User {
+  id                 String              @id @default(cuid())
+  email              String              @unique
+  displayName        String
+  bio                String?
+  avatarUrl          String?
+  posts              Post[]
+  outgoingRequests   ConnectionRequest[] @relation("OutgoingRequests")
+  incomingRequests   ConnectionRequest[] @relation("IncomingRequests")
+  initiatedRelations Connection[]        @relation("Initiator")
+  receivedRelations  Connection[]        @relation("Recipient")
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+}
+
+model ConnectionRequest {
+  id         String                  @id @default(cuid())
+  senderId   String
+  receiverId String
+  status     ConnectionRequestStatus @default(PENDING)
+  sender     User                    @relation("OutgoingRequests", fields: [senderId], references: [id])
+  receiver   User                    @relation("IncomingRequests", fields: [receiverId], references: [id])
+  createdAt  DateTime                @default(now())
+  updatedAt  DateTime                @updatedAt
+
+  @@unique([senderId, receiverId])
+}
+
+model Connection {
+  id          String   @id @default(cuid())
+  initiatorId String
+  recipientId String
+  initiator   User     @relation("Initiator", fields: [initiatorId], references: [id])
+  recipient   User     @relation("Recipient", fields: [recipientId], references: [id])
+  createdAt   DateTime @default(now())
+
+  @@unique([initiatorId, recipientId])
+}
+
+model Post {
+  id        String   @id @default(cuid())
+  authorId  String
+  content   String
+  author    User     @relation(fields: [authorId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
